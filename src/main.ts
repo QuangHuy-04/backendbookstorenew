@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import mongoSanitize from 'express-mongo-sanitize';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -27,10 +26,6 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  app.use(mongoSanitize({
-    replaceWith: '_',
-  }));
-
   // Enable CORS
   app.enableCors({
     origin: [
@@ -44,7 +39,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Global validation pipe
+  // Global validation pipe - provides NoSQL injection protection
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
