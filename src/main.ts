@@ -10,6 +10,7 @@ async function bootstrap() {
     origin: [
       process.env.FRONTEND_URL || 'http://localhost:3000',
       'https://quanghuy274.id.vn',
+      'https://quanghuy.274.id.vn',
     ],
     credentials: true,
   });
