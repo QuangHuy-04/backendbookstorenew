@@ -11,7 +11,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main.js",
+    "start:prod": "node dist/src/main.js",
     "seed": "ts-node src/seed.ts",
     "seed:vietnamese": "ts-node src/seed-vietnamese.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
