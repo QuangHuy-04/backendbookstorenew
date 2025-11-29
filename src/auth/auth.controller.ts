@@ -1,5 +1,4 @@
 import { Controller, Post, Body, Get, UseGuards, Request, Res, UnauthorizedException } from '@nestjs/common';
-import type { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -31,26 +30,8 @@ export class AuthController {
     async verifyRegistration(
         @Body('email') email: string,
         @Body('otp') otp: string,
-        @Res({ passthrough: true }) res: Response,
     ) {
-        const result = await this.authService.verifyRegistration(email, otp);
-
-        // Set HTTP-only cookies
-        res.cookie('access_token', result.access_token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        });
-
-        res.cookie('refresh_token', result.refresh_token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        });
-
-        return { user: result.user };
+        return this.authService.verifyRegistration(email, otp);
     }
 
     @Get('captcha')
@@ -64,63 +45,13 @@ export class AuthController {
         @Body('password') password: string,
         @Body('captcha') captcha?: string,
         @Body('captchaId') captchaId?: string,
-        @Res({ passthrough: true }) res?: Response,
     ) {
-        const result = await this.authService.login(email, password, captcha, captchaId);
-
-        // If result has requireCaptcha, return as is
-        if (result.requireCaptcha) {
-            return result;
-        }
-
-        if (res) {
-            // Set HTTP-only cookies
-            res.cookie('access_token', result.access_token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            });
-
-            res.cookie('refresh_token', result.refresh_token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-            });
-        }
-
-        return { user: result.user };
+        return this.authService.login(email, password, captcha, captchaId);
     }
 
     @Post('refresh')
-    async refresh(
-        @Request() req,
-        @Res({ passthrough: true }) res: Response,
-    ) {
-        const refreshToken = req.cookies?.refresh_token;
-        if (!refreshToken) {
-            throw new UnauthorizedException('No refresh token provided');
-        }
-
-        const result = await this.authService.refresh(refreshToken);
-
-        // Set new HTTP-only cookies
-        res.cookie('access_token', result.access_token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
-
-        res.cookie('refresh_token', result.refresh_token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 30 * 24 * 60 * 60 * 1000,
-        });
-
-        return { user: result.user };
+    async refresh(@Body('refreshToken') refreshToken: string) {
+        return this.authService.refresh(refreshToken);
     }
 
     // Google OAuth routes
@@ -132,29 +63,16 @@ export class AuthController {
 
     @Get('google/callback')
     @UseGuards(AuthGuard('google'))
-    async googleAuthCallback(@Request() req, @Res() res: Response) {
+    async googleAuthCallback(@Request() req, @Res() res) {
         // Generate JWT for the authenticated user
         const payload = { email: req.user.email, sub: req.user._id, role: req.user.role };
         const access_token = this.authService.generateToken(payload);
         const refresh_token = this.authService.generateToken(payload, '30d');
 
-        // Set HTTP-only cookies
-        res.cookie('access_token', access_token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
-
-        res.cookie('refresh_token', refresh_token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 30 * 24 * 60 * 60 * 1000,
-        });
-
-        // Redirect to frontend callback page
-        res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
+        // Redirect to frontend with tokens
+        res.redirect(
+            `${process.env.FRONTEND_URL}/auth/callback?access_token=${access_token}&refresh_token=${refresh_token}`
+        );
     }
 
     // OTP endpoints

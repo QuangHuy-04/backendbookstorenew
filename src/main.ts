@@ -1,30 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import helmet from 'helmet';
-import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  // Security middleware
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-      },
-    },
-    hsts: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    },
-  }));
-
-  app.use(cookieParser());
 
   // Enable CORS
   app.enableCors({
@@ -39,23 +18,17 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Global validation pipe - provides NoSQL injection protection
+  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
     }),
   );
 
   // API prefix
   app.setGlobalPrefix('api');
-
-  // Disable x-powered-by header
-  app.getHttpAdapter().getInstance().disable('x-powered-by');
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
